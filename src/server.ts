@@ -566,6 +566,15 @@ class MicrosoftGraphServer {
           hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
         })
       );
+      // Web clients open /authorize in a popup and watch popup.closed. COOP
+      // same-origin on that response would cut the popup from its opener, so
+      // popup.closed reads true at once and the client reports a cancelled
+      // sign-in. The response is a redirect, not a document, so COOP protects
+      // nothing there.
+      app.use('/authorize', (_req, res, next) => {
+        res.removeHeader('Cross-Origin-Opener-Policy');
+        next();
+      });
 
       app.use(express.json());
       app.use(express.urlencoded({ extended: true }));
@@ -862,6 +871,9 @@ class MicrosoftGraphServer {
         //     access to data" consent line that fails in tenants where user
         //     consent for applications is restricted by policy (even when
         //     admin has pre-consented every scope).
+        // openid, profile and email are injected too, so Microsoft returns an
+        // id token that names the user (name, email, oid, tid) whatever scope
+        // string the client stored for this server.
         const explicitAllowedScopes = parseAllowedScopes(this.options.allowedScopes);
         const clientScope = microsoftAuthUrl.searchParams.get('scope');
         const baseScopes =
@@ -884,7 +896,15 @@ class MicrosoftGraphServer {
         const oboExtraScopes = this.options.obo
           ? (parseAllowedScopes(this.options.extraScopes) ?? [])
           : [];
-        const scopeSet = new Set([...baseScopes, ...oboExtraScopes, 'User.Read', 'offline_access']);
+        const scopeSet = new Set([
+          ...baseScopes,
+          ...oboExtraScopes,
+          'User.Read',
+          'offline_access',
+          'openid',
+          'profile',
+          'email',
+        ]);
         microsoftAuthUrl.searchParams.set('scope', Array.from(scopeSet).join(' '));
 
         // Redirect to Microsoft's authorization page
