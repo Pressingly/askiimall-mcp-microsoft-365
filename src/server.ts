@@ -26,6 +26,7 @@ import {
 } from './lib/microsoft-auth.js';
 import { isAllowedRedirectUri, parseAllowlist } from './lib/redirect-uri-validation.js';
 import { isStandardS256Challenge } from './lib/pkce.js';
+import { graphTokenSource } from './lib/graph-token-source.js';
 import { loadAttachmentUrlConfig, ATTACHMENT_ROUTE } from './lib/attachment-url-config.js';
 import { AttachmentTicketStore } from './lib/attachment-tickets.js';
 import { configureAttachmentMinting } from './lib/attachment-minting.js';
@@ -449,7 +450,11 @@ class MicrosoftGraphServer {
     }
 
     const outputFormat = this.options.toon ? 'toon' : 'json';
-    this.graphClient = new GraphClient(this.authManager, this.secrets, outputFormat);
+    this.graphClient = new GraphClient(
+      graphTokenSource(this.authManager, this.options),
+      this.secrets,
+      outputFormat
+    );
 
     if (!this.options.http) {
       this.server = this.createMcpServer();
