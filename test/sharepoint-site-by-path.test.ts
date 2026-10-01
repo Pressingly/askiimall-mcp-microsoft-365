@@ -9,6 +9,7 @@ import type { GraphClient } from '../src/graph-client.js';
 vi.mock('../src/logger.js', () => ({
   default: {
     info: vi.fn(),
+    debug: vi.fn(),
     error: vi.fn(),
     warn: vi.fn(),
   },

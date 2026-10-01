@@ -9,7 +9,7 @@ import {
 import { TOOL_CATEGORIES } from '../src/tool-categories.js';
 
 vi.mock('../src/logger.js', () => ({
-  default: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+  default: { info: vi.fn(), debug: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
 
 // Import the real generated clients through graph-tools: a configuration entry alone

@@ -54,6 +54,7 @@ vi.mock('../src/logger.js', () => {
   return {
     default: {
       info: vi.fn(),
+      debug: vi.fn(),
       error: vi.fn(),
     },
   };
