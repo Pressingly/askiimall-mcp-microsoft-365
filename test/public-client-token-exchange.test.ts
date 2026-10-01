@@ -309,11 +309,14 @@ describe('Issue #664: two-leg PKCE mapping survives a failed exchange', () => {
     vi.restoreAllMocks();
   });
 
-  /** Runs the /authorize leg and returns the challenge we gave Microsoft. */
+  /**
+   * Runs the /authorize leg and returns the challenge we gave Microsoft. No
+   * code_challenge_method: a challenge declared S256 goes to Microsoft as it is
+   * (test/pkce-passthrough.test.ts), so the two-leg mapping serves a client
+   * that leaves the method out.
+   */
   async function authorize(state: string, verifier = clientVerifier): Promise<string> {
-    return callAuthorize(
-      `&state=${state}&code_challenge=${challengeFor(verifier)}&code_challenge_method=S256`
-    );
+    return callAuthorize(`&state=${state}&code_challenge=${challengeFor(verifier)}`);
   }
 
   /** The stateless variant: no state to key a mapping on (the Claude Code path). */

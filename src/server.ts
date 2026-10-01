@@ -25,6 +25,7 @@ import {
   toOAuthErrorResponse,
 } from './lib/microsoft-auth.js';
 import { isAllowedRedirectUri, parseAllowlist } from './lib/redirect-uri-validation.js';
+import { isStandardS256Challenge } from './lib/pkce.js';
 import { loadAttachmentUrlConfig, ATTACHMENT_ROUTE } from './lib/attachment-url-config.js';
 import { AttachmentTicketStore } from './lib/attachment-tickets.js';
 import { configureAttachmentMinting } from './lib/attachment-minting.js';
@@ -812,8 +813,15 @@ class MicrosoftGraphServer {
         }
 
         // Two-leg PKCE: if the client sent a code_challenge, store it and generate
-        // a separate PKCE pair for the server↔Microsoft leg
-        if (clientCodeChallenge && state) {
+        // a separate PKCE pair for the server↔Microsoft leg. A standard S256
+        // challenge skips this and goes to Microsoft as it is: the mapping lives
+        // in this process only, so /token on another copy of the server, or
+        // after a restart, would not find it.
+        if (
+          clientCodeChallenge &&
+          state &&
+          !isStandardS256Challenge(clientCodeChallenge, clientCodeChallengeMethod)
+        ) {
           const serverCodeVerifier = crypto.randomBytes(32).toString('base64url');
           const serverCodeChallenge = crypto
             .createHash('sha256')
@@ -848,7 +856,8 @@ class MicrosoftGraphServer {
             state: state.substring(0, 8) + '...',
           });
         } else if (clientCodeChallenge) {
-          // No state to key on — fall back to forwarding directly (Claude Code path)
+          // A standard S256 challenge, or no state to key on (Claude Code path):
+          // forward directly, and /token passes the client's verifier on.
           microsoftAuthUrl.searchParams.set('code_challenge', clientCodeChallenge);
           if (clientCodeChallengeMethod) {
             microsoftAuthUrl.searchParams.set('code_challenge_method', clientCodeChallengeMethod);
