@@ -12,6 +12,7 @@ import {
 } from './startup-pinning.js';
 import { createTokenCacheStorage } from './token-cache-storage.js';
 import { dumpError, getActiveResources } from './crash-logging.js';
+import { installGracefulShutdown } from './lib/graceful-shutdown.js';
 import { version } from './version.js';
 
 // Global crash handlers. Without these, an unhandled rejection from a dependency
@@ -171,6 +172,9 @@ async function main(): Promise<void> {
     const server = new MicrosoftGraphServer(authManager, args);
     await server.initialize(version);
     await server.start();
+    if (args.http) {
+      installGracefulShutdown(server);
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`Startup error: ${message}`);
