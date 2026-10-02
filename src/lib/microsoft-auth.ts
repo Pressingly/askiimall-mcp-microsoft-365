@@ -200,7 +200,13 @@ export function toOAuthErrorResponse(error: unknown): {
     };
     if (error.body.error_description) body.error_description = error.body.error_description;
     if (error.body.suberror) body.suberror = error.body.suberror;
-    return { status: 400, body };
+    // A client error stays 400, as RFC 6749 section 5.2 has it. Throttling
+    // (429) and Entra being unavailable (5xx) keep Microsoft's status, so a
+    // client can tell "try again later" from "this grant is dead": a gateway
+    // that ends the sign-in on a 4xx would otherwise disconnect every user who
+    // refreshed during a short throttle.
+    const transient = error.status === 429 || error.status >= 500;
+    return { status: transient ? error.status : 400, body };
   }
   return {
     status: 500,

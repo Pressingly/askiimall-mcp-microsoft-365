@@ -196,6 +196,28 @@ describe('/token and /authorize as an MCP gateway uses them', () => {
         expect(await res.json()).toMatchObject({ error: 'server_error' });
       }
     );
+
+    // Microsoft throttles with 429 and answers 503 when it is busy. Passed on
+    // as 400, the gateway would end the sign-in of every user who refreshed
+    // in that window.
+    it.each([429, 503])(
+      "passes Microsoft's %i on with its own status, so the gateway keeps the sign-in",
+      async (status) => {
+        microsoftAnswers = async () =>
+          Response.json(
+            {
+              error: 'temporarily_unavailable',
+              error_description: 'The server is temporarily too busy to handle the request.',
+            },
+            { status, headers: { 'Retry-After': '60' } }
+          );
+
+        const res = await refresh();
+
+        expect(res.status).toBe(status);
+        expect(await res.json()).toMatchObject({ error: 'temporarily_unavailable' });
+      }
+    );
   });
 
   it("returns Microsoft's code exchange answer as it is, id token included", async () => {
