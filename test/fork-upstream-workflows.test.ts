@@ -23,8 +23,9 @@ const WORKFLOWS_DIR = path.join(
   'workflows'
 );
 
-// Workflows that run in this fork as well (CI on pull requests).
-const FORK_WORKFLOWS = ['build.yml'];
+// Workflows that run in this fork as well (CI on pull requests): upstream's
+// build.yml, and fork-coverage.yml, which is this fork's own.
+const FORK_WORKFLOWS = ['build.yml', 'fork-coverage.yml'];
 
 const UPSTREAM_GUARD = "github.repository == 'Softeria/ms-365-mcp-server'";
 
