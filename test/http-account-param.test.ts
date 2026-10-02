@@ -21,6 +21,7 @@ import { requestContext } from '../src/request-context.js';
 vi.mock('../src/logger.js', () => ({
   default: {
     info: vi.fn(),
+    debug: vi.fn(),
     error: vi.fn(),
     warn: vi.fn(),
   },

@@ -25,6 +25,8 @@ import {
   toOAuthErrorResponse,
 } from './lib/microsoft-auth.js';
 import { isAllowedRedirectUri, parseAllowlist } from './lib/redirect-uri-validation.js';
+import { isStandardS256Challenge } from './lib/pkce.js';
+import { graphTokenSource } from './lib/graph-token-source.js';
 import { loadAttachmentUrlConfig, ATTACHMENT_ROUTE } from './lib/attachment-url-config.js';
 import { AttachmentTicketStore } from './lib/attachment-tickets.js';
 import { configureAttachmentMinting } from './lib/attachment-minting.js';
@@ -448,7 +450,11 @@ class MicrosoftGraphServer {
     }
 
     const outputFormat = this.options.toon ? 'toon' : 'json';
-    this.graphClient = new GraphClient(this.authManager, this.secrets, outputFormat);
+    this.graphClient = new GraphClient(
+      graphTokenSource(this.authManager, this.options),
+      this.secrets,
+      outputFormat
+    );
 
     if (!this.options.http) {
       this.server = this.createMcpServer();
@@ -566,6 +572,15 @@ class MicrosoftGraphServer {
           hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
         })
       );
+      // Web clients open /authorize in a popup and watch popup.closed. COOP
+      // same-origin on that response would cut the popup from its opener, so
+      // popup.closed reads true at once and the client reports a cancelled
+      // sign-in. The response is a redirect, not a document, so COOP protects
+      // nothing there.
+      app.use('/authorize', (_req, res, next) => {
+        res.removeHeader('Cross-Origin-Opener-Policy');
+        next();
+      });
 
       app.use(express.json());
       app.use(express.urlencoded({ extended: true }));
@@ -803,8 +818,15 @@ class MicrosoftGraphServer {
         }
 
         // Two-leg PKCE: if the client sent a code_challenge, store it and generate
-        // a separate PKCE pair for the server↔Microsoft leg
-        if (clientCodeChallenge && state) {
+        // a separate PKCE pair for the server↔Microsoft leg. A standard S256
+        // challenge skips this and goes to Microsoft as it is: the mapping lives
+        // in this process only, so /token on another copy of the server, or
+        // after a restart, would not find it.
+        if (
+          clientCodeChallenge &&
+          state &&
+          !isStandardS256Challenge(clientCodeChallenge, clientCodeChallengeMethod)
+        ) {
           const serverCodeVerifier = crypto.randomBytes(32).toString('base64url');
           const serverCodeChallenge = crypto
             .createHash('sha256')
@@ -839,7 +861,8 @@ class MicrosoftGraphServer {
             state: state.substring(0, 8) + '...',
           });
         } else if (clientCodeChallenge) {
-          // No state to key on — fall back to forwarding directly (Claude Code path)
+          // A standard S256 challenge, or no state to key on (Claude Code path):
+          // forward directly, and /token passes the client's verifier on.
           microsoftAuthUrl.searchParams.set('code_challenge', clientCodeChallenge);
           if (clientCodeChallengeMethod) {
             microsoftAuthUrl.searchParams.set('code_challenge_method', clientCodeChallengeMethod);
@@ -862,6 +885,9 @@ class MicrosoftGraphServer {
         //     access to data" consent line that fails in tenants where user
         //     consent for applications is restricted by policy (even when
         //     admin has pre-consented every scope).
+        // openid, profile and email are injected too, so Microsoft returns an
+        // id token that names the user (name, email, oid, tid) whatever scope
+        // string the client stored for this server.
         const explicitAllowedScopes = parseAllowedScopes(this.options.allowedScopes);
         const clientScope = microsoftAuthUrl.searchParams.get('scope');
         const baseScopes =
@@ -884,7 +910,15 @@ class MicrosoftGraphServer {
         const oboExtraScopes = this.options.obo
           ? (parseAllowedScopes(this.options.extraScopes) ?? [])
           : [];
-        const scopeSet = new Set([...baseScopes, ...oboExtraScopes, 'User.Read', 'offline_access']);
+        const scopeSet = new Set([
+          ...baseScopes,
+          ...oboExtraScopes,
+          'User.Read',
+          'offline_access',
+          'openid',
+          'profile',
+          'email',
+        ]);
         microsoftAuthUrl.searchParams.set('scope', Array.from(scopeSet).join(' '));
 
         // Redirect to Microsoft's authorization page

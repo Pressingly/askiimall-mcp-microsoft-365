@@ -121,7 +121,14 @@ describe('/authorize honours --extra-scopes under --obo', () => {
   it('leaves the client scope alone in OBO mode without --extra-scopes', async () => {
     const scopes = await authorizeScope({ obo: true });
     expect(scopes.sort()).toEqual(
-      [`${CLIENT_ID}/access_as_user`, 'User.Read', 'offline_access'].sort()
+      [
+        `${CLIENT_ID}/access_as_user`,
+        'User.Read',
+        'offline_access',
+        'openid',
+        'profile',
+        'email',
+      ].sort()
     );
   });
 });

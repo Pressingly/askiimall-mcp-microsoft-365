@@ -2531,7 +2531,7 @@ export function registerGraphTools(
   if (enabledToolsPattern) {
     try {
       enabledToolsRegex = new RegExp(enabledToolsPattern, 'i');
-      logger.info(`Tool filtering enabled with pattern: ${enabledToolsPattern}`);
+      logger.debug(`Tool filtering enabled with pattern: ${enabledToolsPattern}`);
     } catch {
       logger.error(`Invalid tool filter regex pattern: ${enabledToolsPattern}. Ignoring filter.`);
     }
@@ -2553,7 +2553,7 @@ export function registerGraphTools(
   for (const tool of allEndpoints) {
     const endpointConfig = endpointsData.find((e) => e.toolName === tool.alias);
     if (!orgMode && endpointConfig && !endpointConfig.scopes && endpointConfig.workScopes) {
-      logger.info(`Skipping work account tool ${tool.alias} - not in org mode`);
+      logger.debug(`Skipping work account tool ${tool.alias} - not in org mode`);
       skippedCount++;
       continue;
     }
@@ -2564,14 +2564,14 @@ export function registerGraphTools(
       // (e.g. get-schedule, find-meeting-times which are read-only queries via POST).
       // PATCH/DELETE are always blocked in read-only mode.
       if (!(method === 'POST' && endpointConfig?.readOnly)) {
-        logger.info(`Skipping write operation ${tool.alias} in read-only mode`);
+        logger.debug(`Skipping write operation ${tool.alias} in read-only mode`);
         skippedCount++;
         continue;
       }
     }
 
     if (enabledToolsRegex && !enabledToolsRegex.test(tool.alias)) {
-      logger.info(`Skipping tool ${tool.alias} - doesn't match filter pattern`);
+      logger.debug(`Skipping tool ${tool.alias} - doesn't match filter pattern`);
       skippedCount++;
       continue;
     }
@@ -2727,11 +2727,11 @@ export function registerGraphTools(
   }
 
   if (multiAccount) {
-    logger.info('Multi-account mode: "account" parameter injected into all tool schemas');
+    logger.debug('Multi-account mode: "account" parameter injected into all tool schemas');
   }
 
   if (disabledByAllowedScopes.length > 0) {
-    logger.info(
+    logger.debug(
       `Allowed scopes disabled ${disabledByAllowedScopes.length} Graph tools: ${formatDisabledToolsForLog(disabledByAllowedScopes)}`
     );
   }
@@ -2758,7 +2758,7 @@ export function registerGraphTools(
   // Layer 3 (list-accounts tool) is registered by registerAuthTools in auth-tools.ts.
   // It is the canonical owner of account discovery — no duplicate registration here.
 
-  logger.info(
+  logger.debug(
     `Tool registration complete: ${registeredCount} registered, ${skippedCount} skipped, ${failedCount} failed`
   );
   installDeniedToolAuditHandler(server, deniedTools);

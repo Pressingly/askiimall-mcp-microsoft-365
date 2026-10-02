@@ -816,9 +816,16 @@ class AuthManager {
       expectedAccount?.expectedHomeAccountId
     );
 
-    const oauthTokenFromEnv = process.env.MS365_MCP_OAUTH_TOKEN;
-    this.oauthToken = oauthTokenFromEnv ?? null;
-    this.isOAuthMode = oauthTokenFromEnv != null;
+    // Fork: MS365_MCP_OAUTH_TOKEN is not read. In HTTP mode it would be one
+    // token answering for every user without a request token of their own
+    // (test/server-held-token.test.ts).
+    if (process.env.MS365_MCP_OAUTH_TOKEN !== undefined) {
+      logger.warn(
+        'MS365_MCP_OAUTH_TOKEN is ignored in this build: the server holds no Graph token of its own.'
+      );
+    }
+    this.oauthToken = null;
+    this.isOAuthMode = false;
   }
 
   /**

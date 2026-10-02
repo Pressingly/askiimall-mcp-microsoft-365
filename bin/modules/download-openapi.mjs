@@ -1,12 +1,17 @@
 import fs from 'fs';
 
-const DEFAULT_OPENAPI_URL =
-  'https://raw.githubusercontent.com/microsoftgraph/msgraph-metadata/refs/heads/master/openapi/v1.0/openapi.yaml';
+// The msgraph-metadata commit both specs come from. The generated client is not in
+// git, so a branch here would let the same commit of this repo build different tools
+// on different days. Move it forward in a commit of its own, for example when a new
+// endpoint needs a newer spec. A copy already in openapi/ is reused: after changing
+// this, run `npm run generate -- --force`.
+const GRAPH_SPEC_COMMIT = '7b2914c8ad1340129f52aa785f13c074cb46fd7c'; // master, 2026-09-29
+
+const DEFAULT_OPENAPI_URL = `https://raw.githubusercontent.com/microsoftgraph/msgraph-metadata/${GRAPH_SPEC_COMMIT}/openapi/v1.0/openapi.yaml`;
 
 // Microsoft publishes a parallel /beta OpenAPI spec at the same path root. Endpoints
 // flagged "apiVersion": "beta" in endpoints.json are generated from this spec instead.
-export const BETA_OPENAPI_URL =
-  'https://raw.githubusercontent.com/microsoftgraph/msgraph-metadata/refs/heads/master/openapi/beta/openapi.yaml';
+export const BETA_OPENAPI_URL = `https://raw.githubusercontent.com/microsoftgraph/msgraph-metadata/${GRAPH_SPEC_COMMIT}/openapi/beta/openapi.yaml`;
 
 export async function downloadGraphOpenAPI(
   targetDir,
