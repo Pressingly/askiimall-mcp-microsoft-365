@@ -65,6 +65,11 @@ const PRESET_META: Record<
   onedrive: {
     description: 'OneDrive app only: drive and file operations, excluding Excel',
   },
+  sharepoint: {
+    description:
+      "SharePoint sites only: find a site and list its document libraries (read-only; a library's files are read with the drive tools)",
+    requiresOrgMode: true,
+  },
   teams: {
     description: 'Teams app only: chats, channels, meetings and presence',
     requiresOrgMode: true,
