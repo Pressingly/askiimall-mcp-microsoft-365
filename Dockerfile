@@ -25,7 +25,9 @@ ENTRYPOINT ["node", "dist/index.js"]
 
 # Askii runs one copy of this image for all its Microsoft 365 products; the
 # tools grow with each product (test/gateway-tool-list.test.ts holds the list).
-# No --org-mode yet: for OneDrive it would add only a tool that needs admin
-# consent. Never --allowed-scopes: /authorize must pass on the scope each
-# AskiiMall service asks for.
-CMD ["--http", "0.0.0.0:3000", "-v", "--preset", "onedrive"]
+# --org-mode registers the SharePoint site tools, which carry work-account
+# scopes only; it adds nothing to onedrive now that the sensitivity-labels tool
+# (Files.Read.All, admin consent) is out of that preset. Never
+# --allowed-scopes: /authorize must pass on the scope each AskiiMall service
+# asks for.
+CMD ["--http", "0.0.0.0:3000", "-v", "--preset", "onedrive,sharepoint", "--org-mode"]

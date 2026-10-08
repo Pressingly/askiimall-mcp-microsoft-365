@@ -4,7 +4,9 @@
  * (mcpo) lists those tools for every Microsoft service in the AskiiMall, and
  * each service asks Microsoft only for the scope typed for it in the developer
  * portal, which /authorize passes on. So the CMD decides what Askii users see
- * in chat. It grows with each product: OneDrive first.
+ * in chat. It grows with each product: OneDrive first, then SharePoint (the
+ * five site read tools of the `sharepoint` preset; a library's files are read
+ * with the drive tools, which take a drive id).
  *
  * The test reads the CMD, parses it as the server does, starts the server and
  * asks it as mcpo does. A change to the CMD, or an upstream merge that adds,
@@ -67,6 +69,15 @@ const ONEDRIVE_TOOLS = [
   'search-onedrive-files',
   'share-drive-item',
   'upload-file-content',
+];
+// SharePoint: the `sharepoint` preset, five read tools to find a site and its
+// document libraries (test/sharepoint-preset.test.ts pins the preset itself).
+const SHAREPOINT_TOOLS = [
+  'get-sharepoint-site',
+  'get-sharepoint-site-by-path',
+  'get-sharepoint-site-drive-by-id',
+  'list-sharepoint-site-drives',
+  'search-sharepoint-sites',
 ];
 // download-bytes-to-file writes to the server's own disk and is hidden over HTTP.
 const HELPER_TOOLS = ['download-bytes', 'get-download-url'];
@@ -158,9 +169,11 @@ describe("the image's CMD, as the server Askii runs", () => {
     expect(cmd).toBeDefined();
     expect(options.http).toBe('0.0.0.0:3000');
     expect(options.v).toBe(true);
+    expect(options.preset).toBe('onedrive,sharepoint');
+    expect(options.orgMode).toBe(true);
   });
 
-  it('lists every OneDrive tool to the gateway, and nothing else', async () => {
+  it('lists every OneDrive and SharePoint tool to the gateway, and nothing else', async () => {
     const res = await fetch(`${origin}/mcp`, {
       method: 'POST',
       headers: {
@@ -174,15 +187,21 @@ describe("the image's CMD, as the server Askii runs", () => {
     const body = (await res.json()) as { result: { tools: { name: string }[] } };
     const names = body.result.tools.map((tool) => tool.name).sort();
 
-    expect(names).toEqual([...ONEDRIVE_TOOLS, ...HELPER_TOOLS].sort());
+    expect(names).toEqual([...ONEDRIVE_TOOLS, ...SHAREPOINT_TOOLS, ...HELPER_TOOLS].sort());
   });
 
-  it('advertises only Files.ReadWrite, which a user can approve without an admin', async () => {
+  // Sites.Read.All is outside Microsoft's default user-consent policy, so on
+  // most work tenants an admin approves the app once; Files.ReadWrite a user
+  // approves alone. Org mode must add nothing else: the sensitivity-labels
+  // tool's Files.Read.All stays out because that tool left the onedrive
+  // preset. The gateway asks Microsoft for its service's scope, not this list
+  // (next test); this list is what the server tells clients it can use.
+  it('advertises exactly Files.ReadWrite and Sites.Read.All', async () => {
     const resource = await getJson(`${origin}/.well-known/oauth-protected-resource/mcp`);
     const metadata = await getJson(`${origin}/.well-known/oauth-authorization-server`);
 
-    expect(resource.scopes_supported).toEqual(['Files.ReadWrite']);
-    expect(metadata.scopes_supported).toEqual(['Files.ReadWrite']);
+    expect(resource.scopes_supported).toEqual(['Files.ReadWrite', 'Sites.Read.All']);
+    expect(metadata.scopes_supported).toEqual(['Files.ReadWrite', 'Sites.Read.All']);
   });
 
   it("asks Microsoft for the scope the gateway's service stores, not the server's own", async () => {

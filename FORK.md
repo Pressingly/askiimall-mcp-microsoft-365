@@ -39,18 +39,20 @@ upstream merges stay simple. Our notes live in this file only.
 
 ## Our patches
 
-| What it does                                                                                     | Commit    | Upstream files we edit                              | Test that guards it                    |
-| ------------------------------------------------------------------------------------------------ | --------- | --------------------------------------------------- | -------------------------------------- |
-| Sign-in popups stay connected (COOP), and an ID token is always requested                        | `0fb252b` | `src/server.ts`                                     | `test/authorize-popup-sign-in.test.ts` |
-| Upstream's release jobs run only in upstream's repository                                        | `64cfd9f` | `.github/workflows/release.yml`                     | `test/fork-upstream-workflows.test.ts` |
-| Standard PKCE challenges go straight to Microsoft, so any copy of the server can answer `/token` | `04cc03e` | `src/server.ts`                                     | `test/pkce-passthrough.test.ts`        |
-| HTTP mode uses only the caller's token, never `MS365_MCP_OAUTH_TOKEN`                            | `7caf3de` | `src/auth.ts`, `src/server.ts`                      | `test/server-held-token.test.ts`       |
-| Requests in flight finish on SIGTERM, then the server exits                                      | `28775e7` | `src/index.ts`                                      | `test/graceful-shutdown.test.ts`       |
-| Tool registration logs at debug, not on every `/mcp` request                                     | `b70f551` | `src/graph-tools.ts`, 16 upstream test files        | `test/registration-logging.test.ts`    |
-| The image runs as the `node` user                                                                | `8e42aba` | `Dockerfile`                                        | none: check `USER node` after a merge  |
-| The Graph spec comes from a fixed `msgraph-metadata` commit                                      | `7208ce1` | `bin/modules/download-openapi.mjs`, `.dockerignore` | `test/graph-spec-pinned.test.ts`       |
-| `/token` passes Microsoft's 429 and 5xx through, so a gateway keeps the sign-in                  | `0bcea0b` | `src/lib/microsoft-auth.ts`                         | `test/gateway-token.test.ts`           |
-| The image starts as the OneDrive server; its tool list is pinned                                 | `ff23874` | `Dockerfile`                                        | `test/gateway-tool-list.test.ts`       |
+| What it does                                                                                          | Commit    | Upstream files we edit                              | Test that guards it                    |
+| ----------------------------------------------------------------------------------------------------- | --------- | --------------------------------------------------- | -------------------------------------- |
+| Sign-in popups stay connected (COOP), and an ID token is always requested                             | `0fb252b` | `src/server.ts`                                     | `test/authorize-popup-sign-in.test.ts` |
+| Upstream's release jobs run only in upstream's repository                                             | `64cfd9f` | `.github/workflows/release.yml`                     | `test/fork-upstream-workflows.test.ts` |
+| Standard PKCE challenges go straight to Microsoft, so any copy of the server can answer `/token`      | `04cc03e` | `src/server.ts`                                     | `test/pkce-passthrough.test.ts`        |
+| HTTP mode uses only the caller's token, never `MS365_MCP_OAUTH_TOKEN`                                 | `7caf3de` | `src/auth.ts`, `src/server.ts`                      | `test/server-held-token.test.ts`       |
+| Requests in flight finish on SIGTERM, then the server exits                                           | `28775e7` | `src/index.ts`                                      | `test/graceful-shutdown.test.ts`       |
+| Tool registration logs at debug, not on every `/mcp` request                                          | `b70f551` | `src/graph-tools.ts`, 16 upstream test files        | `test/registration-logging.test.ts`    |
+| The image runs as the `node` user                                                                     | `8e42aba` | `Dockerfile`                                        | none: check `USER node` after a merge  |
+| The Graph spec comes from a fixed `msgraph-metadata` commit                                           | `7208ce1` | `bin/modules/download-openapi.mjs`, `.dockerignore` | `test/graph-spec-pinned.test.ts`       |
+| `/token` passes Microsoft's 429 and 5xx through, so a gateway keeps the sign-in                       | `0bcea0b` | `src/lib/microsoft-auth.ts`                         | `test/gateway-token.test.ts`           |
+| The image starts as the OneDrive server; its tool list is pinned                                      | `ff23874` | `Dockerfile`                                        | `test/gateway-tool-list.test.ts`       |
+| A read-only `sharepoint` preset of the five site tools; the sensitivity-labels tool leaves `onedrive` | `82c3220` | `src/endpoints.json`, `src/tool-categories.ts`      | `test/sharepoint-preset.test.ts`       |
+| The image starts as the OneDrive and SharePoint server, in org mode                                   | `5da8472` | `Dockerfile`                                        | `test/gateway-tool-list.test.ts`       |
 
 Our own files, which upstream does not have:
 
@@ -92,8 +94,25 @@ git push -u origin HEAD
 ## Adding a Microsoft 365 product
 
 The image's `CMD` in `Dockerfile` sets the tools the server serves (today
-`--preset onedrive`). To add a product, change the `CMD` and update the
-pinned tool list in `test/gateway-tool-list.test.ts` in the same PR.
+`--preset onedrive,sharepoint --org-mode`). To add a product, change the
+`CMD` and update the pinned tool list in `test/gateway-tool-list.test.ts` in
+the same PR.
+
+A product whose tools carry `workScopes` only (SharePoint, Teams, shared
+mailboxes) registers only with `--org-mode`. Give it its own preset:
+`requiresOrgMode: true` in `PRESET_META` (`src/tool-categories.ts`), the
+preset's name in each tool's `presets` array in `src/endpoints.json`, and a
+contract test like `test/sharepoint-preset.test.ts`. Before the first
+`--org-mode`, compare `--list-permissions` with and without it for the
+presets already served: a tool that org mode adds with an admin-consent
+scope must leave those presets first, as
+`extract-drive-item-sensitivity-labels` left `onedrive`.
+
+mcpo lists every tool the `CMD` serves to every AskiiMall Microsoft service,
+whatever scope the service asks for: since SharePoint, the OneDrive connector
+lists the five site tools, and a call with a OneDrive token fails with a 403.
+So a product adds its tools to every Microsoft connector; keep its preset to
+what the product needs.
 
 ## Moving the Graph spec forward
 
