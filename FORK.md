@@ -57,6 +57,9 @@ upstream merges stay simple. Our notes live in this file only.
 | A `teams-chat` preset of the 15 chat and channel tools                                                | `a1c97e4` | `src/endpoints.json`, `src/tool-categories.ts`      | `test/teams-chat-preset.test.ts`       |
 | The image also serves Teams chats and channels                                                        | `b97ca0b` | `Dockerfile`                                        | `test/gateway-tool-list.test.ts`       |
 | `send-mail` keeps a copy in Sent Items unless the caller says not to                                  | `663a295` | `bin/modules/simplified-openapi.mjs`                | `test/send-mail-sent-items.test.ts`    |
+| `list-chat-messages` and `get-chat-message` ask for `Chat.Read`, the scope Graph requires for them    | `73c8e63` | `src/endpoints.json`                                | `test/teams-chat-preset.test.ts`       |
+| `list-channel-messages` tells the model its messages come sorted and that `$top` stops at 50          | `7e3b47a` | `src/endpoints.json`                                | `test/teams-chat-preset.test.ts`       |
+| The served OneDrive, SharePoint and Teams tools offer only the OData query options Graph accepts      | `cf5dff3` | `src/lib/query-parameter-schema.ts`                 | `test/query-option-allowlist.test.ts`  |
 
 Our own files, which upstream does not have:
 
@@ -69,6 +72,9 @@ Our own files, which upstream does not have:
   `src/lib/graceful-shutdown.ts`, and this file.
 - `bin/modules/graph-spec-defaults.mjs`: corrects a default in Microsoft's
   Graph spec before the client is generated (`663a295`).
+- `src/lib/query-option-allowlist.ts`: per served tool, the OData query
+  options Graph accepts, and Graph's `$top` limit where it has one
+  (`cf5dff3`, `f838c9f`).
 
 ## Merging upstream
 
@@ -114,6 +120,14 @@ contract test like `test/sharepoint-preset.test.ts` or
 presets already served: a tool that org mode adds with an admin-consent
 scope must leave those presets first, as
 `extract-drive-item-sensitivity-labels` left `onedrive`.
+
+The new product's list tools offer the eight OData query options Microsoft's
+spec gives nearly every list endpoint, and many Graph APIs answer some of them
+with 400. For each new tool, keep the options its reference page names and a
+live request to Graph accepts, as the header of
+`src/lib/query-option-allowlist.ts` says, and give the tool a row there and in
+`test/query-option-allowlist.test.ts`. A tool that keeps all eight needs no
+row; mail has none.
 
 mcpo lists every tool the `CMD` serves to every AskiiMall Microsoft service,
 whatever scope the service asks for: since Teams, every Microsoft connector
