@@ -27,7 +27,8 @@ ENTRYPOINT ["node", "dist/index.js"]
 # tools grow with each product (test/gateway-tool-list.test.ts holds the list).
 # --org-mode registers the SharePoint site tools, which carry work-account
 # scopes only; it adds nothing to onedrive now that the sensitivity-labels tool
-# (Files.Read.All, admin consent) is out of that preset. Never
+# (Files.Read.All, admin consent) is out of that preset. The mail preset is
+# whole: Askii's Outlook connector reads and sends mail. Never
 # --allowed-scopes: /authorize must pass on the scope each AskiiMall service
 # asks for.
-CMD ["--http", "0.0.0.0:3000", "-v", "--preset", "onedrive,sharepoint", "--org-mode"]
+CMD ["--http", "0.0.0.0:3000", "-v", "--preset", "onedrive,sharepoint,mail", "--org-mode"]
