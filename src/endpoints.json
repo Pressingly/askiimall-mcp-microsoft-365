@@ -1622,7 +1622,7 @@
     "method": "get",
     "toolName": "list-chat-messages",
     "presets": ["teams", "teams-chat", "work"],
-    "workScopes": ["ChatMessage.Read"],
+    "workScopes": ["Chat.Read"],
     "llmTip": "Lists messages in a chat. $top is capped at 50 (higher values return 400) and $orderby accepts only descending order on createdDateTime or lastModifiedDateTime - ascending is rejected. Meeting chats mostly hold system events; transcripts are not available here, use list-meeting-transcripts instead."
   },
   {
@@ -1630,7 +1630,7 @@
     "method": "get",
     "toolName": "get-chat-message",
     "presets": ["teams", "teams-chat", "work"],
-    "workScopes": ["ChatMessage.Read"]
+    "workScopes": ["Chat.Read"]
   },
   {
     "pathPattern": "/chats/{chat-id}/messages/{chatMessage-id}",

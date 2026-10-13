@@ -107,8 +107,9 @@ describe('teams-chat preset contract', () => {
   // What the auth layer computes from the declarations: the scope a login for
   // the preset alone would request (User.Read and offline_access are injected
   // at the OAuth layer, not here). ChannelMessage.Read.All always needs an
-  // admin's consent.
-  it('computes exactly the eight chat and channel scopes', () => {
+  // admin's consent. Chat.Read covers list-chats' and get-chat's
+  // Chat.ReadBasic, so the auth layer folds that one away.
+  it('computes exactly the seven chat and channel scopes', () => {
     const diagnostics = buildAllowedScopeDiagnostics({
       enabledTools: getCombinedPresetPattern(['teams-chat']),
       orgMode: true,
@@ -117,12 +118,32 @@ describe('teams-chat preset contract', () => {
       'Channel.ReadBasic.All',
       'ChannelMessage.Read.All',
       'ChannelMessage.Send',
-      'Chat.ReadBasic',
+      'Chat.Read',
       'ChatMember.Read',
-      'ChatMessage.Read',
       'ChatMessage.Send',
       'Team.ReadBasic.All',
     ]);
     expect(diagnostics.disabledTools).toEqual([]);
+  });
+
+  // Graph v1.0 reads chat messages, listed or one by one, only with Chat.Read
+  // or Chat.ReadWrite in delegated mode; a token with ChatMessage.Read gets 403
+  // "API requires one of 'Chat.Read, Chat.ReadWrite'" (seen live in Askii's
+  // Teams connector). Upstream's teams preset hides this because
+  // list-pinned-chat-messages brings Chat.Read along; this preset has no such
+  // tool, so the two readers must declare it themselves.
+  it('reads chat messages only with Chat.Read, the scope Graph requires', () => {
+    const diagnostics = buildAllowedScopeDiagnostics({
+      enabledTools: getCombinedPresetPattern(['teams-chat']),
+      orgMode: true,
+      allowedScopes:
+        'Channel.ReadBasic.All ChannelMessage.Read.All ChannelMessage.Send Chat.ReadBasic ' +
+        'ChatMember.Read ChatMessage.Read ChatMessage.Send Team.ReadBasic.All',
+    });
+    expect(diagnostics.disabledTools.map((tool) => tool.toolName).sort()).toEqual([
+      'get-chat-message',
+      'list-chat-messages',
+    ]);
+    expect(diagnostics.missingAllowedScopesForTools).toEqual(['Chat.Read']);
   });
 });
