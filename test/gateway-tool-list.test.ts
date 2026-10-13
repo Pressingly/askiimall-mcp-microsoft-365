@@ -7,7 +7,8 @@
  * in chat. It grows with each product: OneDrive first, then SharePoint (the
  * five site read tools of the `sharepoint` preset; a library's files are read
  * with the drive tools, which take a drive id), then Outlook mail (the whole
- * `mail` preset: Askii's Outlook connector reads and sends mail).
+ * `mail` preset: Askii's Outlook connector reads and sends mail), then Teams
+ * (the `teams-chat` preset: chats and channels, read and send).
  *
  * The test reads the CMD, parses it as the server does, starts the server and
  * asks it as mcpo does. A change to the CMD, or an upstream merge that adds,
@@ -128,6 +129,26 @@ const MAIL_TOOLS = [
   'update-mail-rule',
   'update-mailbox-settings',
 ];
+// Teams: the `teams-chat` preset, the user's chats, teams and channels, their
+// messages and a channel message's replies, and sending a message or a
+// channel reply (test/teams-chat-preset.test.ts pins the preset itself).
+const TEAMS_TOOLS = [
+  'get-channel-message',
+  'get-chat',
+  'get-chat-message',
+  'get-team',
+  'get-team-channel',
+  'list-channel-message-replies',
+  'list-channel-messages',
+  'list-chat-members',
+  'list-chat-messages',
+  'list-chats',
+  'list-joined-teams',
+  'list-team-channels',
+  'reply-to-channel-message',
+  'send-channel-message',
+  'send-chat-message',
+];
 // download-bytes-to-file writes to the server's own disk and is hidden over HTTP.
 const HELPER_TOOLS = ['download-bytes', 'get-download-url'];
 
@@ -218,11 +239,11 @@ describe("the image's CMD, as the server Askii runs", () => {
     expect(cmd).toBeDefined();
     expect(options.http).toBe('0.0.0.0:3000');
     expect(options.v).toBe(true);
-    expect(options.preset).toBe('onedrive,sharepoint,mail');
+    expect(options.preset).toBe('onedrive,sharepoint,mail,teams-chat');
     expect(options.orgMode).toBe(true);
   });
 
-  it('lists every OneDrive, SharePoint and Outlook mail tool to the gateway, and nothing else', async () => {
+  it('lists every OneDrive, SharePoint, Outlook mail and Teams tool to the gateway, and nothing else', async () => {
     const res = await fetch(`${origin}/mcp`, {
       method: 'POST',
       headers: {
@@ -237,13 +258,20 @@ describe("the image's CMD, as the server Askii runs", () => {
     const names = body.result.tools.map((tool) => tool.name).sort();
 
     expect(names).toEqual(
-      [...ONEDRIVE_TOOLS, ...SHAREPOINT_TOOLS, ...MAIL_TOOLS, ...HELPER_TOOLS].sort()
+      [
+        ...ONEDRIVE_TOOLS,
+        ...SHAREPOINT_TOOLS,
+        ...MAIL_TOOLS,
+        ...TEAMS_TOOLS,
+        ...HELPER_TOOLS,
+      ].sort()
     );
   });
 
   // Sites.Read.All is outside Microsoft's default user-consent policy, so on
-  // most work tenants an admin approves the app once; the mail scopes need
-  // the same approval on most work tenants; Files.ReadWrite a user approves
+  // most work tenants an admin approves the app once; the mail and Teams
+  // scopes need the same approval on most work tenants, and
+  // ChannelMessage.Read.All on every tenant; Files.ReadWrite a user approves
   // alone. Upstream folds Mail.Read into Mail.ReadWrite but not
   // MailboxSettings.Read into MailboxSettings.ReadWrite, and
   // list-supported-languages and list-supported-time-zones ask for User.Read.
@@ -251,16 +279,24 @@ describe("the image's CMD, as the server Askii runs", () => {
   // Files.Read.All stays out because that tool left the onedrive preset. The
   // gateway asks Microsoft for its service's scope, not this list (next
   // test); this list is what the server tells clients it can use.
-  it('advertises exactly the drive, site and mail scopes', async () => {
+  it('advertises exactly the drive, site, mail and Teams scopes', async () => {
     const resource = await getJson(`${origin}/.well-known/oauth-protected-resource/mcp`);
     const metadata = await getJson(`${origin}/.well-known/oauth-authorization-server`);
     const expected = [
+      'Channel.ReadBasic.All',
+      'ChannelMessage.Read.All',
+      'ChannelMessage.Send',
+      'Chat.ReadBasic',
+      'ChatMember.Read',
+      'ChatMessage.Read',
+      'ChatMessage.Send',
       'Files.ReadWrite',
       'Mail.ReadWrite',
       'Mail.Send',
       'MailboxSettings.Read',
       'MailboxSettings.ReadWrite',
       'Sites.Read.All',
+      'Team.ReadBasic.All',
       'User.Read',
     ];
 

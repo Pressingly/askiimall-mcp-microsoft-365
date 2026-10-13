@@ -28,7 +28,9 @@ ENTRYPOINT ["node", "dist/index.js"]
 # --org-mode registers the SharePoint site tools, which carry work-account
 # scopes only; it adds nothing to onedrive now that the sensitivity-labels tool
 # (Files.Read.All, admin consent) is out of that preset. The mail preset is
-# whole: Askii's Outlook connector reads and sends mail. Never
-# --allowed-scopes: /authorize must pass on the scope each AskiiMall service
-# asks for.
-CMD ["--http", "0.0.0.0:3000", "-v", "--preset", "onedrive,sharepoint,mail", "--org-mode"]
+# whole: Askii's Outlook connector reads and sends mail. Teams is the
+# teams-chat preset (work-account scopes, so --org-mode registers it too):
+# chats and channels, read and send, not upstream's 69-tool teams preset.
+# Never --allowed-scopes: /authorize must pass on the scope each AskiiMall
+# service asks for.
+CMD ["--http", "0.0.0.0:3000", "-v", "--preset", "onedrive,sharepoint,mail,teams-chat", "--org-mode"]
