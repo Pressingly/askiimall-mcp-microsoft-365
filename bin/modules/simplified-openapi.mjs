@@ -1,5 +1,6 @@
 import fs from 'fs';
 import yaml from 'js-yaml';
+import { fixGraphActionDefaults } from './graph-spec-defaults.mjs';
 
 export function createAndSaveSimplifiedOpenAPI(
   endpointsFile,
@@ -16,6 +17,7 @@ export function createAndSaveSimplifiedOpenAPI(
 
   const spec = fs.readFileSync(openapiFile, 'utf8');
   const openApiSpec = yaml.load(spec);
+  fixGraphActionDefaults(openApiSpec);
 
   // Synthesize paths that the Graph REST API supports but are missing from
   // Microsoft's published OpenAPI metadata (e.g. range(address='{address}')/format
