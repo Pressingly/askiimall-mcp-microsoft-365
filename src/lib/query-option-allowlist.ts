@@ -46,7 +46,8 @@ const QUERY_OPTIONS: Record<string, QueryOptionRow> = {
   'list-folder-files': { options: ['top', 'orderby', 'select', 'expand'] },
   // https://learn.microsoft.com/graph/api/driveitem-search
   'search-onedrive-files': { options: ['top', 'orderby', 'select', 'expand'] },
-  // https://learn.microsoft.com/graph/api/driveitem-delta
+  // https://learn.microsoft.com/graph/api/driveitem-delta: $expand=listItem works;
+  // thumbnails fails on a full page, children and permissions always.
   'get-drive-delta': { options: ['top', 'select', 'expand'] },
   // https://learn.microsoft.com/graph/api/driveitem-list-thumbnails
   'list-drive-item-thumbnails': { options: ['select'] },
@@ -75,6 +76,7 @@ const QUERY_OPTIONS: Record<string, QueryOptionRow> = {
   'get-team-channel': { options: ['select'] },
   // https://learn.microsoft.com/graph/api/chatmessage-get: Graph rejects $expand
   'get-channel-message': { options: ['select'] },
+  'get-chat-message': { options: ['select'] },
 };
 
 /** True when the tool has a row and the OData option is not in it. */
@@ -88,7 +90,8 @@ export function isQueryOptionWithheld(toolName: string, bareName: string): boole
  * goes on the provider's number schema itself, keeping its other bounds, so the
  * advertised JSON schema stays one `integer` with a `maximum`: mcpo builds its
  * request model from that schema and reads no `allOf`, so an intersection
- * (`.and()`) reached the model as an untyped field.
+ * (`.and()`) reached the model as an untyped field. A row's limit replaces the
+ * `schema` built so far, upstream's intersection on list-chats included.
  */
 export function capQueryTop(
   toolName: string,
@@ -97,5 +100,8 @@ export function capQueryTop(
 ): z.ZodTypeAny {
   const maxTop = QUERY_OPTIONS[toolName]?.maxTop;
   if (maxTop === undefined) return schema;
-  return source instanceof z.ZodNumber ? source.max(maxTop) : source.and(z.number().max(maxTop));
+  if (!(source instanceof z.ZodNumber)) {
+    throw new Error(`${toolName}: $top is not a number schema, so its limit cannot be set`);
+  }
+  return source.max(maxTop);
 }

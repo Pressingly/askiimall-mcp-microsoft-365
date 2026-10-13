@@ -61,7 +61,7 @@ export function queryParameterSchema(
       // https://learn.microsoft.com/en-us/graph/api/chat-list
       // Intersect so a stricter bound from the provider is never relaxed.
       if (toolName === 'list-chats') schema = source.and(z.number().max(50));
-      schema = capQueryTop(toolName, source, schema);
+      schema = capQueryTop(toolName, source, schema); // fork: a row's limit replaces the line above
       break;
   }
   if (providerSchema.isOptional()) schema = schema.optional();

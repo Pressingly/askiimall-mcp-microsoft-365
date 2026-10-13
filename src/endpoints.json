@@ -1743,7 +1743,7 @@
     "toolName": "list-channel-messages",
     "presets": ["teams", "teams-chat", "work"],
     "workScopes": ["ChannelMessage.Read.All"],
-    "llmTip": "Lists a channel's root messages without their replies (use list-channel-message-replies, or $expand=replies). Only $top (at most 50) and $expand are supported: $orderby returns 400 'Query option OrderBy is not allowed', and Graph does not support the other query options here. Messages already come sorted by the latest activity in each thread, so do not pass an order."
+    "llmTip": "Lists a channel's root messages without their replies (use list-channel-message-replies, or $expand=replies). $top is at most 50. Messages already come sorted by the latest activity in each thread, so do not pass an order."
   },
   {
     "pathPattern": "/teams/{team-id}/channels/{channel-id}/messages/{chatMessage-id}",

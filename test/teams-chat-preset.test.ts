@@ -90,16 +90,17 @@ describe('teams-chat preset contract', () => {
     }
   });
 
-  // The tool's schema offers every OData option Microsoft's metadata lists, but
-  // Graph takes only $top and $expand on a channel's messages: asked for the
-  // newest messages, the model sent $orderby and got 400 "Query option
-  // 'OrderBy' is not allowed" (seen live in Askii's Teams connector).
-  it('tells the model that channel messages take only $top and $expand', () => {
+  // Asked for the newest messages of a channel, the model sent $orderby and got
+  // 400 "Query option 'OrderBy' is not allowed" (seen live in Askii's Teams
+  // connector). The tool no longer offers $orderby (query-option-allowlist.ts),
+  // so the tip tells the model the order it gets instead of a 400 it cannot meet.
+  it('tells the model the order channel messages come in and the $top limit', () => {
     const tip = presetEndpoints.find((e) => e.toolName === 'list-channel-messages')?.llmTip;
 
-    expect(tip).toContain('$top');
-    expect(tip).toContain('$expand');
-    expect(tip).toMatch(/\$orderby returns 400/);
+    expect(tip).toMatch(/already come sorted by the latest activity/);
+    expect(tip).toMatch(/\$top.*at most 50/);
+    expect(tip).toContain('$expand=replies');
+    expect(tip).not.toContain('returns 400');
   });
 
   it('reads with GET and sends with POST only', () => {

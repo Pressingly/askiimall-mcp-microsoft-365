@@ -13,10 +13,12 @@
  * MCP client, as a gateway does.
  */
 import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { registerGraphTools } from '../src/graph-tools.js';
+import { capQueryTop } from '../src/lib/query-option-allowlist.js';
 import type { GraphClient } from '../src/graph-client.js';
 
 vi.mock('../src/logger.js', () => ({
@@ -74,6 +76,7 @@ describe('query options a tool offers', () => {
     ['list-channel-message-replies', ['top']],
     ['get-team-channel', ['select']],
     ['get-channel-message', ['select']],
+    ['get-chat-message', ['select']],
   ])('%s offers only the options Graph accepts there', async (tool, expected) => {
     const offered = await offeredOptions();
 
@@ -116,6 +119,12 @@ describe("Graph's $top limit", () => {
     expect(top.type).toBe('integer');
     expect(top.maximum).toBe(50);
     expect(top).not.toHaveProperty('allOf');
+  });
+
+  // No served tool reaches this today: a capped tool whose $top is not a number
+  // could only be capped with an intersection, which mcpo reads as an untyped field.
+  it('refuses to cap a $top that is not a number schema, naming the tool', () => {
+    expect(() => capQueryTop('list-chats', z.string(), z.string())).toThrow(/list-chats/);
   });
 });
 
