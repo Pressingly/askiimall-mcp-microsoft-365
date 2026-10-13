@@ -56,6 +56,7 @@ upstream merges stay simple. Our notes live in this file only.
 | The image also serves Outlook mail, the whole `mail` preset                                           | `b07a38b` | `Dockerfile`                                        | `test/gateway-tool-list.test.ts`       |
 | A `teams-chat` preset of the 15 chat and channel tools                                                | `a1c97e4` | `src/endpoints.json`, `src/tool-categories.ts`      | `test/teams-chat-preset.test.ts`       |
 | The image also serves Teams chats and channels                                                        | `b97ca0b` | `Dockerfile`                                        | `test/gateway-tool-list.test.ts`       |
+| `send-mail` keeps a copy in Sent Items unless the caller says not to                                  | `663a295` | `bin/modules/simplified-openapi.mjs`                | `test/send-mail-sent-items.test.ts`    |
 
 Our own files, which upstream does not have:
 
@@ -66,6 +67,8 @@ Our own files, which upstream does not have:
   (`515b497`).
 - `src/lib/pkce.ts`, `src/lib/graph-token-source.ts`,
   `src/lib/graceful-shutdown.ts`, and this file.
+- `bin/modules/graph-spec-defaults.mjs`: corrects a default in Microsoft's
+  Graph spec before the client is generated (`663a295`).
 
 ## Merging upstream
 
