@@ -1598,7 +1598,7 @@
     "pathPattern": "/me/chats",
     "method": "get",
     "toolName": "list-chats",
-    "presets": ["teams", "teams-write", "work"],
+    "presets": ["teams", "teams-chat", "teams-write", "work"],
     "workScopes": ["Chat.ReadBasic"],
     "llmTip": "Lists the signed-in user's chats. Only $filter, $top (max 50), $expand (members, lastMessagePreview) and $orderby are supported; $orderby accepts just lastMessagePreview/createdDateTime in descending order. Other options are rejected: $search returns 400 'Query option Search is not allowed', and ordering by lastUpdatedDateTime returns 400 BadRequest. Meeting chats have chatType=meeting and carry the meeting subject in topic."
   },
@@ -1606,14 +1606,14 @@
     "pathPattern": "/chats/{chat-id}",
     "method": "get",
     "toolName": "get-chat",
-    "presets": ["teams", "teams-write", "work"],
+    "presets": ["teams", "teams-chat", "teams-write", "work"],
     "workScopes": ["Chat.ReadBasic"]
   },
   {
     "pathPattern": "/chats/{chat-id}/members",
     "method": "get",
     "toolName": "list-chat-members",
-    "presets": ["teams", "work"],
+    "presets": ["teams", "teams-chat", "work"],
     "workScopes": ["ChatMember.Read"],
     "llmTip": "Lists members of a chat. Each member has displayName, email, roles (owner/guest), and visibleHistoryStartDateTime. For meeting chats, use the chatInfo.threadId from get-online-meeting as the chat-id to see who participated in the meeting chat."
   },
@@ -1621,16 +1621,16 @@
     "pathPattern": "/chats/{chat-id}/messages",
     "method": "get",
     "toolName": "list-chat-messages",
-    "presets": ["teams", "work"],
-    "workScopes": ["ChatMessage.Read"],
+    "presets": ["teams", "teams-chat", "work"],
+    "workScopes": ["Chat.Read"],
     "llmTip": "Lists messages in a chat. $top is capped at 50 (higher values return 400) and $orderby accepts only descending order on createdDateTime or lastModifiedDateTime - ascending is rejected. Meeting chats mostly hold system events; transcripts are not available here, use list-meeting-transcripts instead."
   },
   {
     "pathPattern": "/chats/{chat-id}/messages/{chatMessage-id}",
     "method": "get",
     "toolName": "get-chat-message",
-    "presets": ["teams", "work"],
-    "workScopes": ["ChatMessage.Read"]
+    "presets": ["teams", "teams-chat", "work"],
+    "workScopes": ["Chat.Read"]
   },
   {
     "pathPattern": "/chats/{chat-id}/messages/{chatMessage-id}",
@@ -1651,7 +1651,7 @@
     "pathPattern": "/chats/{chat-id}/messages",
     "method": "post",
     "toolName": "send-chat-message",
-    "presets": ["teams", "teams-write", "work"],
+    "presets": ["teams", "teams-chat", "teams-write", "work"],
     "workScopes": ["ChatMessage.Send"],
     "llmTip": "Use contentType 'html' in the body — plain text contentType gets mangled by Graph API. To @mention someone, put an <at id=\"0\">Name</at> tag in the html content and add a mentions array to the request body, as a sibling of the body property (not a separate top-level tool parameter): { body: { contentType: 'html', content: 'Hi <at id=\"0\">Name</at>' }, mentions: [{ id: 0, mentionText: 'Name', mentioned: { user: { id: '<aad-user-id>', displayName: 'Name', userIdentityType: 'aadUser' } } }] }. Each mention id must match its <at id> value; include userIdentityType: 'aadUser' or Graph returns 400 'value without a type name'."
   },
@@ -1659,7 +1659,7 @@
     "pathPattern": "/me/joinedTeams",
     "method": "get",
     "toolName": "list-joined-teams",
-    "presets": ["teams", "teams-write", "work"],
+    "presets": ["teams", "teams-chat", "teams-write", "work"],
     "workScopes": ["Team.ReadBasic.All"]
   },
   {
@@ -1699,21 +1699,21 @@
     "pathPattern": "/teams/{team-id}",
     "method": "get",
     "toolName": "get-team",
-    "presets": ["teams", "teams-write", "work"],
+    "presets": ["teams", "teams-chat", "teams-write", "work"],
     "workScopes": ["Team.ReadBasic.All"]
   },
   {
     "pathPattern": "/teams/{team-id}/channels",
     "method": "get",
     "toolName": "list-team-channels",
-    "presets": ["teams", "teams-write", "work"],
+    "presets": ["teams", "teams-chat", "teams-write", "work"],
     "workScopes": ["Channel.ReadBasic.All"]
   },
   {
     "pathPattern": "/teams/{team-id}/channels/{channel-id}",
     "method": "get",
     "toolName": "get-team-channel",
-    "presets": ["teams", "teams-write", "work"],
+    "presets": ["teams", "teams-chat", "teams-write", "work"],
     "workScopes": ["Channel.ReadBasic.All"]
   },
   {
@@ -1741,14 +1741,15 @@
     "pathPattern": "/teams/{team-id}/channels/{channel-id}/messages",
     "method": "get",
     "toolName": "list-channel-messages",
-    "presets": ["teams", "work"],
-    "workScopes": ["ChannelMessage.Read.All"]
+    "presets": ["teams", "teams-chat", "work"],
+    "workScopes": ["ChannelMessage.Read.All"],
+    "llmTip": "Lists a channel's root messages without their replies (use list-channel-message-replies, or $expand=replies). $top is at most 50. Messages already come sorted by the latest activity in each thread, so do not pass an order."
   },
   {
     "pathPattern": "/teams/{team-id}/channels/{channel-id}/messages/{chatMessage-id}",
     "method": "get",
     "toolName": "get-channel-message",
-    "presets": ["teams", "work"],
+    "presets": ["teams", "teams-chat", "work"],
     "workScopes": ["ChannelMessage.Read.All"]
   },
   {
@@ -1770,7 +1771,7 @@
     "pathPattern": "/teams/{team-id}/channels/{channel-id}/messages",
     "method": "post",
     "toolName": "send-channel-message",
-    "presets": ["teams", "teams-write", "work"],
+    "presets": ["teams", "teams-chat", "teams-write", "work"],
     "workScopes": ["ChannelMessage.Send"],
     "llmTip": "Use contentType 'html' in the body — plain text contentType gets mangled by Graph API. To @mention someone, put an <at id=\"0\">Name</at> tag in the html content and add a mentions array to the request body, as a sibling of the body property (not a separate top-level tool parameter): { body: { contentType: 'html', content: 'Hi <at id=\"0\">Name</at>' }, mentions: [{ id: 0, mentionText: 'Name', mentioned: { user: { id: '<aad-user-id>', displayName: 'Name', userIdentityType: 'aadUser' } } }] }. Each mention id must match its <at id> value; include userIdentityType: 'aadUser' or Graph returns 400 'value without a type name'."
   },
@@ -1778,7 +1779,7 @@
     "pathPattern": "/teams/{team-id}/channels/{channel-id}/messages/{chatMessage-id}/replies",
     "method": "post",
     "toolName": "reply-to-channel-message",
-    "presets": ["teams", "teams-write", "work"],
+    "presets": ["teams", "teams-chat", "teams-write", "work"],
     "workScopes": ["ChannelMessage.Send"],
     "llmTip": "Use contentType 'html' in the body — plain text contentType gets mangled by Graph API. To @mention someone, put an <at id=\"0\">Name</at> tag in the html content and add a mentions array to the request body, as a sibling of the body property (not a separate top-level tool parameter): { body: { contentType: 'html', content: 'Hi <at id=\"0\">Name</at>' }, mentions: [{ id: 0, mentionText: 'Name', mentioned: { user: { id: '<aad-user-id>', displayName: 'Name', userIdentityType: 'aadUser' } } }] }. Each mention id must match its <at id> value; include userIdentityType: 'aadUser' or Graph returns 400 'value without a type name'."
   },
@@ -1786,7 +1787,7 @@
     "pathPattern": "/teams/{team-id}/channels/{channel-id}/messages/{chatMessage-id}/replies",
     "method": "get",
     "toolName": "list-channel-message-replies",
-    "presets": ["teams", "work"],
+    "presets": ["teams", "teams-chat", "work"],
     "workScopes": ["ChannelMessage.Read.All"]
   },
   {

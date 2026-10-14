@@ -81,6 +81,11 @@ const PRESET_META: Record<
     // A write-only preset must not include the generic byte readers.
     omitUniversalUtilities: true,
   },
+  'teams-chat': {
+    description:
+      'Teams chats and channels only: list them, read messages and channel replies, send a message or a channel reply (no meetings, presence, edits or deletes)',
+    requiresOrgMode: true,
+  },
 };
 
 // Utility tools (graph-tools.ts UTILITY_TOOLS) are code-defined, not in endpoints.json, so they

@@ -53,6 +53,13 @@ upstream merges stay simple. Our notes live in this file only.
 | The image starts as the OneDrive server; its tool list is pinned                                      | `ff23874` | `Dockerfile`                                        | `test/gateway-tool-list.test.ts`       |
 | A read-only `sharepoint` preset of the five site tools; the sensitivity-labels tool leaves `onedrive` | `82c3220` | `src/endpoints.json`, `src/tool-categories.ts`      | `test/sharepoint-preset.test.ts`       |
 | The image starts as the OneDrive and SharePoint server, in org mode                                   | `5da8472` | `Dockerfile`                                        | `test/gateway-tool-list.test.ts`       |
+| The image also serves Outlook mail, the whole `mail` preset                                           | `b07a38b` | `Dockerfile`                                        | `test/gateway-tool-list.test.ts`       |
+| A `teams-chat` preset of the 15 chat and channel tools                                                | `a1c97e4` | `src/endpoints.json`, `src/tool-categories.ts`      | `test/teams-chat-preset.test.ts`       |
+| The image also serves Teams chats and channels                                                        | `b97ca0b` | `Dockerfile`                                        | `test/gateway-tool-list.test.ts`       |
+| `send-mail` keeps a copy in Sent Items unless the caller says not to                                  | `663a295` | `bin/modules/simplified-openapi.mjs`                | `test/send-mail-sent-items.test.ts`    |
+| `list-chat-messages` and `get-chat-message` ask for `Chat.Read`, the scope Graph requires for them    | `73c8e63` | `src/endpoints.json`                                | `test/teams-chat-preset.test.ts`       |
+| `list-channel-messages` tells the model its messages come sorted and that `$top` stops at 50          | `7e3b47a` | `src/endpoints.json`                                | `test/teams-chat-preset.test.ts`       |
+| The served OneDrive, SharePoint and Teams tools offer only the OData query options Graph accepts      | `cf5dff3` | `src/lib/query-parameter-schema.ts`                 | `test/query-option-allowlist.test.ts`  |
 
 Our own files, which upstream does not have:
 
@@ -63,6 +70,11 @@ Our own files, which upstream does not have:
   (`515b497`).
 - `src/lib/pkce.ts`, `src/lib/graph-token-source.ts`,
   `src/lib/graceful-shutdown.ts`, and this file.
+- `bin/modules/graph-spec-defaults.mjs`: corrects a default in Microsoft's
+  Graph spec before the client is generated (`663a295`).
+- `src/lib/query-option-allowlist.ts`: per served tool, the OData query
+  options Graph accepts, and Graph's `$top` limit where it has one
+  (`cf5dff3`, `f838c9f`).
 
 ## Merging upstream
 
@@ -94,25 +106,38 @@ git push -u origin HEAD
 ## Adding a Microsoft 365 product
 
 The image's `CMD` in `Dockerfile` sets the tools the server serves (today
-`--preset onedrive,sharepoint --org-mode`). To add a product, change the
-`CMD` and update the pinned tool list in `test/gateway-tool-list.test.ts` in
-the same PR.
+`--preset onedrive,sharepoint,mail,teams-chat --org-mode`). To add a
+product, change the `CMD` and update the pinned tool list in
+`test/gateway-tool-list.test.ts` in the same PR.
 
 A product whose tools carry `workScopes` only (SharePoint, Teams, shared
 mailboxes) registers only with `--org-mode`. Give it its own preset:
 `requiresOrgMode: true` in `PRESET_META` (`src/tool-categories.ts`), the
 preset's name in each tool's `presets` array in `src/endpoints.json`, and a
-contract test like `test/sharepoint-preset.test.ts`. Before the first
+contract test like `test/sharepoint-preset.test.ts` or
+`test/teams-chat-preset.test.ts`. Before the first
 `--org-mode`, compare `--list-permissions` with and without it for the
 presets already served: a tool that org mode adds with an admin-consent
 scope must leave those presets first, as
 `extract-drive-item-sensitivity-labels` left `onedrive`.
 
+The new product's list tools offer the eight OData query options Microsoft's
+spec gives nearly every list endpoint, and many Graph APIs answer some of them
+with 400. For each new tool, keep the options its reference page names and a
+live request to Graph accepts, as the header of
+`src/lib/query-option-allowlist.ts` says, and give the tool a row there and in
+`test/query-option-allowlist.test.ts`. A tool that keeps all eight needs no
+row; mail has none.
+
 mcpo lists every tool the `CMD` serves to every AskiiMall Microsoft service,
-whatever scope the service asks for: since SharePoint, the OneDrive connector
-lists the five site tools, and a call with a OneDrive token fails with a 403.
-So a product adds its tools to every Microsoft connector; keep its preset to
-what the product needs.
+whatever scope the service asks for: since Teams, every Microsoft connector
+lists 84 tools. A call whose token lacks the tool's scope fails with Graph's
+403; where a tenant admin approved that scope for the app, Entra puts it in
+every token of the tenant and the call works, so a OneDrive connection can
+then send mail. So a product adds its tools to every Microsoft connector; keep
+its preset to what the product needs (upstream's `teams` preset has 69 tools,
+`teams-chat` 15). A tool filter per service, in mcpo and the AskiiMall, is
+not built yet.
 
 ## Moving the Graph spec forward
 

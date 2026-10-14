@@ -6,7 +6,9 @@
  * portal, which /authorize passes on. So the CMD decides what Askii users see
  * in chat. It grows with each product: OneDrive first, then SharePoint (the
  * five site read tools of the `sharepoint` preset; a library's files are read
- * with the drive tools, which take a drive id).
+ * with the drive tools, which take a drive id), then Outlook mail (the whole
+ * `mail` preset: Askii's Outlook connector reads and sends mail), then Teams
+ * (the `teams-chat` preset: chats and channels, read and send).
  *
  * The test reads the CMD, parses it as the server does, starts the server and
  * asks it as mcpo does. A change to the CMD, or an upstream merge that adds,
@@ -78,6 +80,74 @@ const SHAREPOINT_TOOLS = [
   'get-sharepoint-site-drive-by-id',
   'list-sharepoint-site-drives',
   'search-sharepoint-sites',
+];
+// Outlook mail: the whole `mail` preset, reading, sending, drafts, folders,
+// rules and mailbox settings (AGENTICMEM-76 decision D3: the connector reads
+// and sends mail). Attachments' bytes are read with download-bytes.
+const MAIL_TOOLS = [
+  'add-mail-attachment',
+  'copy-mail-message',
+  'create-draft-email',
+  'create-focused-inbox-override',
+  'create-forward-draft',
+  'create-mail-attachment-upload-session',
+  'create-mail-child-folder',
+  'create-mail-folder',
+  'create-mail-rule',
+  'create-outlook-category',
+  'create-reply-all-draft',
+  'create-reply-draft',
+  'delete-focused-inbox-override',
+  'delete-mail-attachment',
+  'delete-mail-folder',
+  'delete-mail-message',
+  'delete-mail-rule',
+  'forward-mail-message',
+  'get-mail-message',
+  'get-mail-message-mime',
+  'get-mail-tips',
+  'get-mailbox-settings',
+  'list-focused-inbox-overrides',
+  'list-mail-attachments',
+  'list-mail-child-folders',
+  'list-mail-folder-messages',
+  'list-mail-folder-messages-delta',
+  'list-mail-folders',
+  'list-mail-messages',
+  'list-mail-rules',
+  'list-outlook-categories',
+  'list-supported-languages',
+  'list-supported-time-zones',
+  'move-mail-message',
+  'reply-all-mail-message',
+  'reply-mail-message',
+  'send-draft-message',
+  'send-mail',
+  'update-focused-inbox-override',
+  'update-mail-folder',
+  'update-mail-message',
+  'update-mail-rule',
+  'update-mailbox-settings',
+];
+// Teams: the `teams-chat` preset, the user's chats, teams and channels, their
+// messages and a channel message's replies, and sending a message or a
+// channel reply (test/teams-chat-preset.test.ts pins the preset itself).
+const TEAMS_TOOLS = [
+  'get-channel-message',
+  'get-chat',
+  'get-chat-message',
+  'get-team',
+  'get-team-channel',
+  'list-channel-message-replies',
+  'list-channel-messages',
+  'list-chat-members',
+  'list-chat-messages',
+  'list-chats',
+  'list-joined-teams',
+  'list-team-channels',
+  'reply-to-channel-message',
+  'send-channel-message',
+  'send-chat-message',
 ];
 // download-bytes-to-file writes to the server's own disk and is hidden over HTTP.
 const HELPER_TOOLS = ['download-bytes', 'get-download-url'];
@@ -169,11 +239,11 @@ describe("the image's CMD, as the server Askii runs", () => {
     expect(cmd).toBeDefined();
     expect(options.http).toBe('0.0.0.0:3000');
     expect(options.v).toBe(true);
-    expect(options.preset).toBe('onedrive,sharepoint');
+    expect(options.preset).toBe('onedrive,sharepoint,mail,teams-chat');
     expect(options.orgMode).toBe(true);
   });
 
-  it('lists every OneDrive and SharePoint tool to the gateway, and nothing else', async () => {
+  it('lists every OneDrive, SharePoint, Outlook mail and Teams tool to the gateway, and nothing else', async () => {
     const res = await fetch(`${origin}/mcp`, {
       method: 'POST',
       headers: {
@@ -187,21 +257,50 @@ describe("the image's CMD, as the server Askii runs", () => {
     const body = (await res.json()) as { result: { tools: { name: string }[] } };
     const names = body.result.tools.map((tool) => tool.name).sort();
 
-    expect(names).toEqual([...ONEDRIVE_TOOLS, ...SHAREPOINT_TOOLS, ...HELPER_TOOLS].sort());
+    expect(names).toEqual(
+      [
+        ...ONEDRIVE_TOOLS,
+        ...SHAREPOINT_TOOLS,
+        ...MAIL_TOOLS,
+        ...TEAMS_TOOLS,
+        ...HELPER_TOOLS,
+      ].sort()
+    );
   });
 
   // Sites.Read.All is outside Microsoft's default user-consent policy, so on
-  // most work tenants an admin approves the app once; Files.ReadWrite a user
-  // approves alone. Org mode must add nothing else: the sensitivity-labels
-  // tool's Files.Read.All stays out because that tool left the onedrive
-  // preset. The gateway asks Microsoft for its service's scope, not this list
-  // (next test); this list is what the server tells clients it can use.
-  it('advertises exactly Files.ReadWrite and Sites.Read.All', async () => {
+  // most work tenants an admin approves the app once; the mail and Teams
+  // scopes need the same approval on most work tenants, and
+  // ChannelMessage.Read.All on every tenant; Files.ReadWrite a user approves
+  // alone. Upstream folds Mail.Read into Mail.ReadWrite but not
+  // MailboxSettings.Read into MailboxSettings.ReadWrite, and
+  // list-supported-languages and list-supported-time-zones ask for User.Read.
+  // Org mode must add nothing else: the sensitivity-labels tool's
+  // Files.Read.All stays out because that tool left the onedrive preset. The
+  // gateway asks Microsoft for its service's scope, not this list (next
+  // test); this list is what the server tells clients it can use.
+  it('advertises exactly the drive, site, mail and Teams scopes', async () => {
     const resource = await getJson(`${origin}/.well-known/oauth-protected-resource/mcp`);
     const metadata = await getJson(`${origin}/.well-known/oauth-authorization-server`);
+    const expected = [
+      'Channel.ReadBasic.All',
+      'ChannelMessage.Read.All',
+      'ChannelMessage.Send',
+      'Chat.Read',
+      'ChatMember.Read',
+      'ChatMessage.Send',
+      'Files.ReadWrite',
+      'Mail.ReadWrite',
+      'Mail.Send',
+      'MailboxSettings.Read',
+      'MailboxSettings.ReadWrite',
+      'Sites.Read.All',
+      'Team.ReadBasic.All',
+      'User.Read',
+    ];
 
-    expect(resource.scopes_supported).toEqual(['Files.ReadWrite', 'Sites.Read.All']);
-    expect(metadata.scopes_supported).toEqual(['Files.ReadWrite', 'Sites.Read.All']);
+    expect(resource.scopes_supported).toEqual(expected);
+    expect(metadata.scopes_supported).toEqual(expected);
   });
 
   it("asks Microsoft for the scope the gateway's service stores, not the server's own", async () => {

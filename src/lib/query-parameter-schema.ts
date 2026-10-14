@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getODataParamDescription, shouldOmitTopParam } from './param-descriptions.js';
+import { capQueryTop, isQueryOptionWithheld } from './query-option-allowlist.js';
 
 // Microsoft's OpenAPI collection parameters disagree with these endpoints' REST contracts:
 // https://learn.microsoft.com/en-us/graph/api/user-list-joinedteams
@@ -24,6 +25,7 @@ export function queryParameterSchema(
 ): z.ZodTypeAny | undefined {
   const bareName = name.replace(/^\$/, '').toLowerCase();
   if (TEAM_LIST_TOOLS.has(toolName)) return undefined;
+  if (isQueryOptionWithheld(toolName, bareName)) return undefined;
   // The generated collection schema advertises generic OData options, but the
   // custom-emoji REST contract documents only $top/$filter. Graph can omit image
   // bytes from collection responses unless $select=contentBytes is explicit.
@@ -59,6 +61,7 @@ export function queryParameterSchema(
       // https://learn.microsoft.com/en-us/graph/api/chat-list
       // Intersect so a stricter bound from the provider is never relaxed.
       if (toolName === 'list-chats') schema = source.and(z.number().max(50));
+      schema = capQueryTop(toolName, source, schema); // fork: a row's limit replaces the line above
       break;
   }
   if (providerSchema.isOptional()) schema = schema.optional();
