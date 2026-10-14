@@ -31,10 +31,15 @@ upstream merges stay simple. Our notes live in this file only.
    `fix/agenticmem-63-token-errors`; commit subject in Conventional Commits
    with a scope and the issue key, for example
    `fix(http): pass Microsoft's 429 through /token [AGENTICMEM-63]`.
-6. **Our release tags start with `askii-`**: `askii-v1.0.0-rc.1` for sandbox,
-   `askii-v1.0.0` for production. Upstream tags each release `v0.x.y` and may
-   reach `v1.0.0` itself; the prefix keeps the two apart. Dev deploys from
-   `main` and needs no tag.
+6. **Release tags follow the team's pattern**, as in every other repository:
+   `v1.0.0-rc.1` for sandbox, `v1.0.0` for production, both on a commit of
+   `main`. The sandbox build (Cloud Build trigger
+   `mcp-microsoft-365-sandbox-verification`) runs only on tags that match
+   `^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[1-9][0-9]*$`. Dev deploys from `main` and
+   needs no tag. This repository also holds upstream's `v0.x.y` tags from
+   when it was forked. Upstream makes no `-rc` tags, and our versions start
+   at `v1.0.0`, above upstream's. Never push upstream's tags here (see
+   "Merging upstream"): a production trigger on `vX.Y.Z` would build them.
 7. **Issues are off here.** Work is planned in the team's own tracker.
 
 ## Our patches
